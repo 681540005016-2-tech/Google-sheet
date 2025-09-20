@@ -34,9 +34,6 @@
         .transition-all {
             transition: all 0.3s ease-in-out;
         }
-        details > summary {
-            cursor: pointer;
-        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -44,43 +41,11 @@
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="mb-10 pb-4 border-b border-slate-200">
             <h1 class="text-4xl font-bold text-slate-900">แดชบอร์ดข้อมูลพฤติกรรมผู้บริโภค</h1>
-            <p class="text-slate-500 mt-2">เชื่อมต่อข้อมูลโดยตรงจาก Google Sheets เพื่อสร้าง Dashboard</p>
+            <p class="text-slate-500 mt-2">แสดงข้อมูลจาก Google Sheets โดยอัตโนมัติ</p>
         </header>
 
-        <!-- NEW: Google Sheet Input Section -->
-        <div id="sheet-prompt" class="p-8 bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div class="text-center">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 21h17.25c1.14 0 2.063-.923 2.063-2.062V7.438c0-1.14-.923-2.063-2.063-2.063h-4.437c-.342 0-.675-.105-.96-.293l-1.82-1.11c-.57-.347-1.29-.347-1.86 0l-1.82 1.11a1.65 1.65 0 01-.96.293H3.375C2.235 5.375 1.313 6.298 1.313 7.438v11.5c0 1.14.922 2.063 2.062 2.063z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75V11.25m1.875 3.375H10.125" />
-                 </svg>
-                <h2 class="text-2xl font-bold mt-4 mb-2 text-slate-800">เชื่อมต่อกับ Google Sheets</h2>
-                <p class="text-slate-600 mb-6 max-w-lg mx-auto">โปรดเผยแพร่ชีตของคุณเป็นไฟล์ CSV และวาง URL ที่ได้รับลงในช่องด้านล่าง</p>
-            </div>
-            
-            <div class="max-w-3xl mx-auto">
-                <div class="relative">
-                    <input type="text" id="sheetUrlInput" placeholder="วาง URL ของ Google Sheet (ที่เผยแพร่เป็น .csv) ที่นี่..." class="w-full p-4 pl-5 pr-36 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm">
-                    <button id="loadSheetBtn" class="absolute top-1/2 right-2 -translate-y-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-2 px-6 rounded-md hover:shadow-lg hover:scale-105 transition-all shadow-md">
-                        สร้างแดชบอร์ด
-                    </button>
-                </div>
-                <div id="url-error" class="text-red-500 text-sm mt-2 text-center hidden">กรุณาใส่ URL ที่ถูกต้อง</div>
-            </div>
-            
-            <details class="max-w-3xl mx-auto mt-6 text-sm bg-slate-50 p-4 rounded-lg">
-                <summary class="font-semibold text-slate-700">คลิกเพื่อดูวิธีรับ URL ที่ถูกต้อง</summary>
-                <ol class="list-decimal list-inside mt-3 space-y-2 text-slate-600">
-                    <li>เปิดไฟล์ Google Sheet ของคุณ</li>
-                    <li>ไปที่เมนู <code class="bg-slate-200 px-1 rounded">ไฟล์</code> > <code class="bg-slate-200 px-1 rounded">แชร์</code> > <code class="bg-slate-200 px-1 rounded">เผยแพร่ไปยังเว็บ</code></li>
-                    <li>ในหน้าต่างที่ปรากฏ ให้เลือกชีตที่คุณต้องการแสดงข้อมูล</li>
-                    <li>ในช่องตัวเลือกที่สอง ให้เปลี่ยนเป็น <code class="bg-slate-200 px-1 rounded">ค่าที่คั่นด้วยจุลภาค (.csv)</code></li>
-                    <li>กดปุ่ม <code class="bg-green-600 text-white px-2 py-1 rounded">เผยแพร่</code> และคัดลอกลิงก์ที่ได้รับมาวางในช่องด้านบน</li>
-                </ol>
-            </details>
-        </div>
-        
-        <div id="loading-state" class="hidden text-center p-8 bg-white rounded-xl shadow-md">
+        <!-- Loading State (shown by default) -->
+        <div id="loading-state" class="text-center p-8 bg-white rounded-xl shadow-md">
             <div class="loader mx-auto"></div>
             <p class="mt-4 text-slate-600">กำลังดึงและประมวลผลข้อมูล...</p>
         </div>
@@ -167,51 +132,37 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const sheetUrlInput = document.getElementById('sheetUrlInput');
-            const loadSheetBtn = document.getElementById('loadSheetBtn');
-            const sheetPrompt = document.getElementById('sheet-prompt');
+        document.addEventListener('DOMContentLoaded', async () => {
             const loadingState = document.getElementById('loading-state');
             const dashboardContent = document.getElementById('dashboard-content');
-            const urlError = document.getElementById('url-error');
+            
+            // The Google Sheet URL provided by the user
+            const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRPE35A8fuDJr59IqfHuR1qdt_E-6L6AwHzd0kt3j02EaFFPJR70HmY8gOqv7y3-JvVlWrnPENVKMxT/pub?gid=0&single=true&output=csv';
 
-            loadSheetBtn.addEventListener('click', async () => {
-                const url = sheetUrlInput.value.trim();
-                
-                // Basic URL validation
-                if (!url || !url.startsWith('https://docs.google.com/spreadsheets/d/')) {
-                    urlError.textContent = 'กรุณาใส่ URL ที่ถูกต้อง';
-                    urlError.classList.remove('hidden');
-                    return;
+            try {
+                // Use D3.csv to fetch and parse the data directly from the URL
+                const data = await d3.csv(sheetUrl, d3.autoType);
+                if (data.length === 0) {
+                    throw new Error("No data found in the sheet or sheet is not accessible.");
                 }
-                urlError.classList.add('hidden');
-
-                sheetPrompt.classList.add('hidden');
-                dashboardContent.classList.add('hidden');
-                loadingState.classList.remove('hidden');
-
-                try {
-                    // Use D3.csv directly with the URL
-                    const data = await d3.csv(url, d3.autoType);
-                    if (data.length === 0) {
-                        throw new Error("No data found in the sheet.");
-                    }
-                    processData(data);
-                } catch (error) {
-                    console.error('Error loading or processing data:', error);
-                    loadingState.classList.add('hidden');
-                    sheetPrompt.classList.remove('hidden'); // Show input again on error
-                    urlError.textContent = 'ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบ URL และการตั้งค่าการเผยแพร่';
-                    urlError.classList.remove('hidden');
-                }
-            });
+                // If data is loaded successfully, process and display it
+                processData(data);
+            } catch (error) {
+                console.error('Error loading or processing data:', error);
+                // If an error occurs, show an error message
+                loadingState.innerHTML = `
+                    <p class="text-red-500 font-bold text-lg">เกิดข้อผิดพลาด</p>
+                    <p class="text-slate-600 mt-2">ไม่สามารถโหลดข้อมูลจาก Google Sheet ได้</p>
+                    <p class="text-slate-500 text-sm mt-1">กรุณาตรวจสอบว่าลิงก์ถูกต้องและตั้งค่าการเผยแพร่เป็นสาธารณะ</p>
+                `;
+            }
         });
         
         function processData(data) {
-                // FIX: Define constants inside the function to resolve scope issue.
                 const loadingState = document.getElementById('loading-state');
                 const dashboardContent = document.getElementById('dashboard-content');
 
+                // Hide loading state and show the dashboard
                 loadingState.classList.add('hidden');
                 dashboardContent.classList.remove('hidden');
 
